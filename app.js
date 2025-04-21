@@ -14,6 +14,8 @@ var hbs = require('hbs');
 // Bring in the database
 require('./app_api/models/db');
 
+require('dotenv').config();
+
 var app = express();
 
 // view engine setup
@@ -22,6 +24,9 @@ app.set('views', path.join(__dirname, 'app_server', 'views'));
 // Register handlebar partials
 hbs.registerPartials(path.join(__dirname + '/app_server/views/partials'))
 
+var passport = require('passport');
+require('./app_api/config/passport')
+
 app.set('view engine', 'hbs');
 
 app.use(logger('dev'));
@@ -29,10 +34,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(passport.initialize());
+
 
 app.use('/api', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
   next();
 })
@@ -41,6 +48,14 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/travel', travelRouter);
 app.use('/api', apiRouter);
+
+app.use((err, req, next) => {
+  if(err.name === 'UnauthorizedError') {
+    res
+      .status(401)
+      .json({"message": err.name + ": " + err.message})
+  }
+});
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
